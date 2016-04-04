@@ -12,7 +12,7 @@ H1 = [1 .3];
 H2 = [.2 .5 1 .3];
 H3 = [1 .05 .3 .4 .2 .05];
 
-for datarate=[6, 9, 12, 18, 24, 36, 48, 54]
+for datarate=[6, 24]
     switch datarate
         case 6,
             M=2;
@@ -95,10 +95,11 @@ for datarate=[6, 9, 12, 18, 24, 36, 48, 54]
             OFDMsig2 = conv(H2,OFDMsig);
             OFDMsig3 = conv(H3,OFDMsig);
             
-            for nchan = 1:3
-                
-            OFDMsig = OFDMsig1(1:80*frameCount);
+            OFDMsig(:,1) = OFDMsig1(1:80*frameCount);
+            OFDMsig(:,2) = OFDMsig2(1:80*frameCount);
+            OFDMsig(:,3) = OFDMsig3(1:80*frameCount);
             
+            for eq = 1:2;
                 noisyTx = awgn(OFDMsig(1:80*frameCount),snrs(ebno),-10);
 
                 %receive
