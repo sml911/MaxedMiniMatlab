@@ -1,6 +1,6 @@
 clc, clear, close all;
 %% 802.11a Spec - Stephen Leone, Noah Santacruz
-totPak = 2^8;
+totPak = 2^5;
 packetSize = 2304;
 EbNo_Vec = 0:20;
 traceback=12;
