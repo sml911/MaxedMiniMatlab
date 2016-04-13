@@ -3,7 +3,8 @@ clc;clear;close all;
 M = 2;
 k = log2(M);
 N = 10E5;
-EbNo = 20;
+SNR = 20;
+N0=-SNR;%Transmit power is normalized to 0dBW
 numTx = 2;
 T = 1e-5;
 dopshift = 0;
@@ -24,10 +25,18 @@ H = [chan1.PathGains,chan2.PathGains;chan3.PathGains,chan4.PathGains];
 [U,S,V] = svd(H);
 
 
+noise = wgn(size(xTilde,1),size(xTilde,2),N0);
 
 %PLAIN MIMO
 yPlain = H*xTilde;
-noise = awgn(yPlain,EbNo,-10);
 yPlainN = yPlain + noise;
 %PRECODING
 xPrecode = V'*xTilde;
+yPrecode = H*xPrecode;
+yPrecodeN = yPrecode + noise;
+yTilde = U' * yPrecodeN;
+%ZEROFORCING
+W = pinv(H);
+yZF = W*yPlainN;
+%MMSE
+W = inv(H'*H + N0)*H'
