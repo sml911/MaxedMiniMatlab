@@ -27,7 +27,6 @@ for H = 1:3
             H=H3;
             titl='Channel3';
     end
-    H = H/sqrt(var(H));
     for datarate=[6,12,24];
         switch datarate
             case 6,
@@ -75,7 +74,7 @@ for H = 1:3
                 GI =FFTsym(49:64,:);
                 OFDMsym = [GI;FFTsym];
                 OFDMsig=reshape(OFDMsym,80*frameCount,1);
-                OFDMsig = OFDMsig/sqrt(var(OFDMsig));
+                OFDMsig = OFDMsig/sqrt(var(OFDMsig);
 
                 %channel
 
