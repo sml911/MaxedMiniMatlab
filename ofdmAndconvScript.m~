@@ -1,10 +1,10 @@
 clc, clear, close all;
 %% 802.11a Spec - Stephen Leone, Noah Santacruz
-totPak = 2^4;
+totPak = 64;
 packetSize = 2304;
-EbNo_Vec = 0:20;
+EbNo_Vec = 0:2:10;
 traceback=12;
-sigpow=-10;
+sigpow=1;
 
 berVec = zeros(totPak,size(EbNo_Vec,2));
 trel = poly2trellis(7,[133,171]); %[1011011,1111001] in binary
@@ -13,9 +13,9 @@ H1 = [1 .3];
 H2 = [.2 .5 1 .3];
 H3 = [1 .05 .3 .4 .2 .05];
 R=1/2;
-for H = 1:3
+for Htype = 1:3
     figure;
-    switch H
+    switch Htype
         
         case 1, 
             H=H1;
@@ -27,6 +27,7 @@ for H = 1:3
             H=H3;
             titl='Channel3';
     end
+    H = H/sqrt(var(H));
     for datarate=[6,12,24];
         switch datarate
             case 6,
@@ -60,22 +61,7 @@ for H = 1:3
                 msg = bi2de(reshape(txVitBits,k,length(txVitBits)/k).','left-msb')';
                 txMod = qammod(msg,M,0,'gray');
                 frameCount=numel(txMod)/48;
-                txtones = reshape(txMod,48,frameCount);
-                txOFDM = [txtones(1:5,:);zeros(1,frameCount);
-                          txtones(6:18,:);zeros(1,frameCount);
-                          txtones(19:24,:);zeros(1,frameCount);
-                          txtones(25:30,:);zeros(1,frameCount);
-                          txtones(31:43,:);zeros(1,frameCount);
-                          txtones(44:48,:)];
-                txDTFTin = [txOFDM(27:53,:);
-                          zeros(11,frameCount);
-                          txOFDM(1:26,:)];
-                FFTsym = ifft(txDTFTin,64,1);
-                GI =FFTsym(49:64,:);
-                OFDMsym = [GI;FFTsym];
-                OFDMsig=reshape(OFDMsym,80*frameCount,1);
-                OFDMsig = OFDMsig/sqrt(var(OFDMsig);
-
+                OFDMsig = OFDMmod(txMod);
                 %channel
 
                 OFDMsig = conv(H,OFDMsig);
@@ -85,28 +71,22 @@ for H = 1:3
 
                 %receive
 
+                OFDMdemod(noisyTx);
                 rxOFDMsym = reshape(noisyTx,80,frameCount);
                 rxFFTin = rxOFDMsym(17:80,:);
 
+
                 rxFFTZF = fft(rxFFTin,64,1)./repmat(fft(H',64,1),1,frameCount);
                 N0 = 10^(-snrs(ebno)/10);
-                rxFFTMMSE = fft(rxFFTin,64,1)./(repmat(fft(H',64,1),1,frameCount)+N0);
 
+                rxFFTMMSE = fft(rxFFTin,64,1)./(repmat(fft(H',64,1),1,frameCount)+N0);
                 for eq = 0:1
                     if eq
                         rxFFTout = rxFFTZF;
                     else
                         rxFFTout = rxFFTMMSE;
                     end
-                    rxOFDM = [rxFFTout(39:64,:);rxFFTout(1:27,:)];
-                    rxtones = [rxOFDM(1:5,:);
-                               rxOFDM(7:19,:);
-                               rxOFDM(21:26,:);
-                               rxOFDM(28:33,:);
-                               rxOFDM(35:47,:);
-                               rxOFDM(49:53,:)];
-
-                    rxDemod = reshape(rxtones,frameCount*48,1);
+                    rxDemod = OFDMmod();
                     rx = qamdemod(rxDemod,M,0,'gray');
                     rx = de2bi(rx,'left-msb');
                     rxBits = reshape(rx.',numel(rx),1);
@@ -117,7 +97,7 @@ for H = 1:3
                     else
                         [~,berVecMMSE(pak,ebno)] = biterr(bits(1:end-traceback), rxVitBits(traceback+1:end));
                     end
-                end
+                end 
             end
         end
 
