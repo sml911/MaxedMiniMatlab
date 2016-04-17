@@ -2,14 +2,14 @@ clc;clear;close all;
 
 M = 2;
 k = log2(M);
-N = 1E6;
+N = 1E6; %number of bits per iteration
 SNR = 1:20;
 N0=-SNR;%Transmit power is normalized to 0dBW
 numTx = 2;
 T = 1e-5;
 dopshift = 0;
 
-numIter = 100;
+numIter = 1;
 berPlain   = zeros(length(SNR),numIter);
 berPrecode = zeros(length(SNR),numIter);
 berZF      = zeros(length(SNR),numIter);
