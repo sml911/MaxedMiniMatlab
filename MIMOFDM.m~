@@ -68,15 +68,10 @@ rxFFT2 = fft(rxFFTin2,64,1);
 yZFN = zeros(numTx,frameCount,64);
 for k = 1:64
     Hk = BigHFFT(:,:,k);
-    WZFk = (Hk'*Hk)\Hk;
-    WMMSEk = (Hk'*Hk + N0linear)\Hk;
-    yZFN(:,:,k) = WZFk*[rxFFT1(k,:);...
-                        rxFFT2(k,:)];
-    yMMSE(:,:,k) = WMMSEk * [rxFFT1(k,:);...
-                             rxFFT2(k,:)];
-
+    Wk = (Hk'*Hk)\Hk;
+    yZFN(:,:,k) = Wk*[rxFFT1(k,:);...
+                      rxFFT2(k,:)];
 end
-    
 
 OFDMdemod1 = OFDMdemod(rxFFT1,frameCount);
 OFDMdemod2 = OFDMdemod(rxFFT2,frameCount);
