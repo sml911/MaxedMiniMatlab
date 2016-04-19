@@ -41,7 +41,7 @@ xTilde = qammod(msg,M);
 
 N0linear = std(xTilde(:))/10^(SNR/10);
 N0db = 10*log10(N0linear);
-noise = wgn(size(xTilde,1),size(xTilde,2),N0db,'complex');
+noise = wgn(size(xTilde,1),64/48*size(xTilde,2),N0db,'complex');
 
 %OFDM MOD
 frameCount=numel(xTilde)/48/numTx;
@@ -49,33 +49,34 @@ frameCount=numel(xTilde)/48/numTx;
 OFDMsig1 = OFDMmod(xTilde(1,:),frameCount);
 OFDMsig2 = OFDMmod(xTilde(2,:),frameCount);
 
-y1 = conv(h11,OFDMsig1) + conv(h21,OFDMsig2) ;
-y2 = conv(h12,OFDMsig1) + conv(h22,OFDMsig2) ;
-y1 = y1(1:length(OFDMsig1));
-y2 = y2(1:length(OFDMsig2));
-y1N = y1 + noise(1,:);
-y2N = y2 + noise(2,:);
+Y1 = conv(h11,OFDMsig1) + conv(h21,OFDMsig2) ;
+Y2 = conv(h12,OFDMsig1) + conv(h22,OFDMsig2) ;
+Y1 = Y1(1:length(OFDMsig1));
+Y2 = Y2(1:length(OFDMsig2));
+Y1N = Y1.' + noise(1,:);
+Y2N = Y2.' + noise(2,:);
 
 %demodulate using OFDM
-rxOFDMsym1 = reshape(y1N,80,frameCount);
+rxOFDMsym1 = reshape(Y1N,80,frameCount);
 rxFFTin1 = rxOFDMsym1(17:80,:);
 rxFFT1 = fft(rxFFTin1,64,1);
-rxOFDMsym2 = reshape(y2N,80,frameCount);
+rxOFDMsym2 = reshape(Y2N,80,frameCount);
 rxFFTin2 = rxOFDMsym2(17:80,:);
 rxFFT2 = fft(rxFFTin2,64,1);
 
 
 yZFN = zeros(numTx,frameCount,64);
+yMMSEN = zeros(numTx,frameCount,64);
 for k = 1:64
     Hk = BigHFFT(:,:,k);
     WZFk = (Hk'*Hk)\Hk;
     WMMSEk = (Hk'*Hk + N0linear)\Hk;
     yZFN(:,:,k) = WZFk*[rxFFT1(k,:);...
                         rxFFT2(k,:)];
-    yMMSE(:,:,k) = WMMSEk * [rxFFT1(k,:);...
+    yMMSEN(:,:,k) = WMMSEk * [rxFFT1(k,:);...
                              rxFFT2(k,:)];
-
 end
+    
     
 
 OFDMdemod1 = OFDMdemod(rxFFT1,frameCount);
