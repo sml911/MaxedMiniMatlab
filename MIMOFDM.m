@@ -4,7 +4,7 @@ M = 2;
 k = log2(M);
 SNR = 20;
 totPak = 64;
-N = 2304;
+N = 2304*2;
 EbNo_Vec = 0:2:10;
 traceback=12;
 sigpow=1;
@@ -13,6 +13,7 @@ numTx = 2;
 berVec = zeros(totPak,size(EbNo_Vec,2));
 trel = poly2trellis(7,[133,171]); %[1011011,1111001] in binary
 spect = distspec(trel,2);
+R=1/2;
 
 h11 = [1 .3 0 0 0 0];
 h12 = [.2 .5 1 .3 0 0];
@@ -33,15 +34,13 @@ BigHFFT(2,2,:) = h22fft;
 
 
 bits = randi([0,1],numTx,N);
+%txVitBits = convenc(bits,trel);
+%msg = bi2de(reshape(txVitBits,k,length(txVitBits)/k).','left-msb')';
 msg = zeros(2,size(bits,2)/k);
 for ii = 1:numTx
     msg(ii,:) = bi2de(reshape(bits(ii,:),k,size(bits,2)/k).','left-msb')';
 end
 xTilde = qammod(msg,M);
-
-N0linear = std(xTilde(:))/10^(SNR/10);
-N0db = 10*log10(N0linear);
-noise = wgn(size(xTilde,1),64/48*size(xTilde,2),N0db,'complex');
 
 %OFDM MOD
 frameCount=numel(xTilde)/48/numTx;
@@ -49,6 +48,11 @@ frameCount=numel(xTilde)/48/numTx;
 OFDMsig1 = OFDMmod(xTilde(1,:),frameCount);
 OFDMsig2 = OFDMmod(xTilde(2,:),frameCount);
 
+
+%MIMO Channel
+N0linear = std([OFDMsig1;OFDMsig2])/10^(SNR/10);
+N0db = 10*log10(N0linear);
+noise = wgn(numTx,length(OFDMsig1),N0db,'complex');
 Y1 = conv(h11,OFDMsig1) + conv(h21,OFDMsig2) ;
 Y2 = conv(h12,OFDMsig1) + conv(h22,OFDMsig2) ;
 Y1 = Y1(1:length(OFDMsig1));
@@ -76,18 +80,35 @@ for k = 1:64
     yMMSEN(:,:,k) = WMMSEk * [rxFFT1(k,:);...
                              rxFFT2(k,:)];
 end
-    
-    
+rxZF1 = squeeze(yZFN(1,:,:)).';    
+rxZF2 = squeeze(yZFN(2,:,:)).';  
+rxMMSE1 = squeeze(yMMSEN(1,:,:)).';    
+rxMMSE2 = squeeze(yMMSEN(2,:,:)).'; 
 
-OFDMdemod1 = OFDMdemod(rxFFT1,frameCount);
-OFDMdemod2 = OFDMdemod(rxFFT2,frameCount);
+OFDMdemodZF(1,:) = OFDMdemod(rxZF1,frameCount).';
+OFDMdemodZF(2,:) = OFDMdemod(rxZF2,frameCount).';
+OFDMdemodMMSE(1,:) = OFDMdemod(rxMMSE1,frameCount).';
+OFDMdemodMMSE(2,:) = OFDMdemod(rxMMSE2,frameCount).';
 
+for eq = 0:1
+    if eq
+        Yout = OFDMdemodZF;
+    else
+        Yout = OFDMdemodMMSE;
+    end
+    Yout = Yout * std(xTilde(1,:)) / std(Yout(1,:));
+    rx = qamdemod(Yout,M,0,'gray');
+    rx = de2bi(rx,'left-msb');
+    rxBits = reshape(rx.',numel(rx),1);
+    bits = reshape(bits,numel(rx),1);
+    %rxVitBits = vitdec(rxBits,trel,traceback,'cont','hard'); % Decode
 
-%rxFFTZF1 = rxFFT1./repmat(fft(H',64,1),1,frameCount);
-%rxFFTMMSE1 = rxFFT1./(repmat(fft(H',64,1),1,frameCount)+N0linear);
-rxFFT2 = fft(rxFFTin2,64,1);
-%rxFFTZF2 = rxFFT2./repmat(fft(H',64,1),1,frameCount);
-%rxFFTMMSE2 = rxFFT2./(repmat(fft(H',64,1),1,frameCount)+N0linear);
+    if eq
+        [~,berVecZF] = biterr(bits, rxBits,'overall')
+    else
+        [~,berVecMMSE] = biterr(bits, rxBits,'overall')
+    end
+end 
 
 
 

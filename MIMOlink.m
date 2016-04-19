@@ -87,6 +87,9 @@ for Htype = 1:3
                     scatterplotColorful(yPrecodeN,xTilde,yTilde,['Precoding - ' int2str(Htype)]);
                 end
                 msgRxPrecode = qamdemod(yTilde,M);
+                %Why Not This?
+                %bitsRxPrecode = de2bi(msgRxPrecode,'left-msb');
+                %[bitsLost,berPrecode(Htype,jj)] = biterr(bits,bitsRxPrecode);
                 [bitsLost,berPrecode(Htype,jj)] = biterr(msg,msgRxPrecode);
                 bitsPrecode(Htype,jj) = N*k - bitsLost;
             elseif Mtype == 2
