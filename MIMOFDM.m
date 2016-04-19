@@ -2,7 +2,7 @@ clc, clear, close all;
 
 M = 2;
 k = log2(M);
-SNR = 20;
+SNR = 0;
 totPak = 1;
 N = 2304*2;
 
@@ -78,9 +78,9 @@ for jj = 1:totPak
         WZFk = (Hk'*Hk)\Hk;
         WMMSEk = (Hk'*Hk + N0linear)\Hk;
         yZFN(:,:,kk) = WZFk*[rxFFT1(kk,:);...
-                            rxFFT2(kk,:)];
+                             rxFFT2(kk,:)];
         yMMSEN(:,:,kk) = WMMSEk * [rxFFT1(kk,:);...
-                                 rxFFT2(kk,:)];
+                                   rxFFT2(kk,:)];
     end
     rxZF1 = squeeze(yZFN(1,:,:)).';    
     rxZF2 = squeeze(yZFN(2,:,:)).';  
@@ -104,7 +104,6 @@ for jj = 1:totPak
         rx = de2bi(rx,'left-msb');
         rxBits = reshape(rx.',numel(rx),1);
         bits = reshape(bits,numel(rx),1);
-        %rxVitBits = vitdec(rxBits,trel,traceback,'cont','hard'); % Decode
 
         if eq
             [~,berVecZF(jj)] = biterr(bits, rxBits,'overall');
