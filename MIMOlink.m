@@ -1,6 +1,6 @@
 clc;clear;close all;
-
-N = 1200; %number of bits per iteration
+%% MIMO - Part 1 - Stephen Leone, Noah Santacruz
+N = 2400; %number of bits per iteration
 SNR = 20
 %N0=-SNR;%Transmit power is normalized to 0dBW
 numTx = 2;

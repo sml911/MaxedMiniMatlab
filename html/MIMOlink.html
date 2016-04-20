@@ -1,0 +1,415 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>MIMOlink</title><meta name="generator" content="MATLAB 8.6"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2016-04-20"><meta name="DC.source" content="MIMOlink.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#2">MIMO - Part 1 - Stephen Leone, Noah Santacruz</a></li></ul></div><pre class="codeinput">clc;clear;close <span class="string">all</span>;
+</pre><h2>MIMO - Part 1 - Stephen Leone, Noah Santacruz<a name="2"></a></h2><pre class="codeinput">N = 2400; <span class="comment">%number of bits per iteration</span>
+SNR = 20
+<span class="comment">%N0=-SNR;%Transmit power is normalized to 0dBW</span>
+numTx = 2;
+dopshift = 0;
+bitsThresh = 0;
+
+numIter = 5000;
+
+berPlain   = zeros(3,numIter);
+berPrecode = zeros(3,numIter);
+berZF      = zeros(3,numIter);
+berMMSE    = zeros(3,numIter);
+
+bitsPlain   = zeros(3,numIter);
+bitsPrecode = zeros(3,numIter);
+bitsZF      = zeros(3,numIter);
+bitsMMSE    = zeros(3,numIter);
+
+H1 = [1   0;<span class="keyword">...</span>
+      0   0.8];
+H2 = [1.2 1;<span class="keyword">...</span>
+      0.7 1.5];
+H3 = [0.85 0.4;<span class="keyword">...</span>
+      0.4   0.95];<span class="keyword">...</span>
+
+Hs(:,:,1) = H1;
+Hs(:,:,2) = H2;
+Hs(:,:,3) = H3;
+
+disp(<span class="string">'Channel BER Targets'</span>)
+H_BERtargets = [1E-6 1E-5 1E-5]
+
+precodeMs = [64,16,16];
+zfMs = [64,16,16];
+mmseMs = [16,4,16];
+
+h = waitbar(0,<span class="string">'...'</span>);
+<span class="keyword">for</span> Htype = 1:3
+    H = Hs(:,:,Htype);
+    <span class="keyword">for</span> Mtype = 1:3
+        <span class="keyword">if</span> Mtype == 1
+            M = precodeMs(Htype);
+        <span class="keyword">elseif</span> Mtype == 2
+            M = zfMs(Htype);
+        <span class="keyword">elseif</span> Mtype == 3
+            M = mmseMs(Htype);
+        <span class="keyword">end</span>
+        k = log2(M);
+
+        <span class="keyword">for</span> jj = 1:numIter
+            bits = randi([0,1],numTx,N);
+            msg = zeros(2,size(bits,2)/k);
+            <span class="keyword">for</span> ii = 1:numTx
+                msg(ii,:) = bi2de(reshape(bits(ii,:),k,size(bits,2)/k).',<span class="string">'left-msb'</span>)';
+            <span class="keyword">end</span>
+            xTilde = qammod(msg,M);
+            <span class="comment">%xTilde = xTilde./std(xTilde(:)); %normalize power</span>
+
+            <span class="comment">%chan1 = rayleighchan(T,dopshift);</span>
+            <span class="comment">%chan2 = rayleighchan(T,dopshift);</span>
+            <span class="comment">%chan3 = rayleighchan(T,dopshift);</span>
+            <span class="comment">%chan4 = rayleighchan(T,dopshift);</span>
+
+            <span class="comment">%H = [chan1.PathGains,chan2.PathGains;chan3.PathGains,chan4.PathGains];</span>
+            [U,S,V] = svd(H);
+
+            N0linear = std(xTilde(:))/10^(SNR/10);
+            N0db = 10*log10(N0linear);
+            noise = wgn(size(xTilde,1),size(xTilde,2),N0db,<span class="string">'complex'</span>);
+
+            <span class="comment">%PLAIN MIMO</span>
+            yPlain = H*xTilde;
+            yPlainN = yPlain + noise;
+<span class="comment">%             msgRxPlain = qamdemod(yPlainN,M);</span>
+<span class="comment">%             [bitsPlain(Htype,jj),berPlain(Htype,jj)] = biterr(msg,msgRxPlain);</span>
+
+
+            <span class="keyword">if</span> Mtype == 1
+                <span class="comment">%PRECODING</span>
+                xPrecode = V*xTilde;
+                yPrecode = H*xPrecode;
+                yPrecodeN = yPrecode + noise;
+
+                yTilde = (U' * yPrecodeN);
+                yTilde = S\yTilde;
+                <span class="keyword">if</span> numIter == 1
+                    scatterplotColorful(yPrecodeN,xTilde,yTilde,[<span class="string">'Precoding - '</span> int2str(Htype)]);
+                <span class="keyword">end</span>
+                msgRxPrecode = qamdemod(yTilde,M);
+                <span class="comment">%Why Not This?</span>
+                <span class="comment">%bitsRxPrecode = de2bi(msgRxPrecode,'left-msb');</span>
+                <span class="comment">%[bitsLost,berPrecode(Htype,jj)] = biterr(bits,bitsRxPrecode);</span>
+                [bitsLost,berPrecode(Htype,jj)] = biterr(msg,msgRxPrecode);
+                <span class="keyword">if</span> bitsLost &lt;= bitsThresh
+                    bitsPrecode(Htype,jj) = N*k - bitsLost;
+                <span class="keyword">end</span>
+            <span class="keyword">elseif</span> Mtype == 2
+                <span class="comment">%ZEROFORCING</span>
+                W = (H'*H)\H';
+
+                yZFN = W*yPlainN;
+                <span class="keyword">if</span> numIter == 1
+                    scatterplotColorful(yPlainN,xTilde,yZFN,[<span class="string">'Zero Forcing - '</span> int2str(Htype)]);
+                <span class="keyword">end</span>
+                msgRxZF = qamdemod(yZFN,M);
+                [bitsLost,berZF(Htype,jj)] = biterr(msg,msgRxZF);
+                <span class="keyword">if</span> bitsLost &lt;= bitsThresh
+                    bitsZF(Htype,jj) = N*k - bitsLost;
+                <span class="keyword">end</span>
+            <span class="keyword">elseif</span> Mtype == 3
+                <span class="comment">%MMSE</span>
+                W = (H'*H + N0linear)\H';
+                yMMSEN = W*yPlainN;
+
+                <span class="keyword">if</span> (numIter == 1)
+                    scatterplotColorful(yPlainN,xTilde,yMMSEN,[<span class="string">'MMSE - '</span> int2str(Htype)]);
+                <span class="keyword">end</span>
+                msgRxMMSE = qamdemod(yMMSEN,M);
+                [bitsLost,berMMSE(Htype,jj)] = biterr(msg,msgRxMMSE);
+                <span class="keyword">if</span> bitsLost &lt;= bitsThresh
+                    bitsMMSE(Htype,jj) = N*k - bitsLost;
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+    waitbar(Htype/length(1:3));
+<span class="keyword">end</span>
+close(h);
+<span class="comment">%meanBerPlain = mean(berPlain,2)'</span>
+meanBerPrecode = mean(berPrecode,2)'
+meanBerZF = mean(berZF,2)'
+meanBerMMSE = mean(berMMSE,2)'
+
+meanBitsPrecode = sum(bitsPrecode,2)'
+meanBitsZF = sum(bitsZF,2)'
+meanBitsMMSE = sum(bitsMMSE,2)'
+
+<span class="comment">% figure; hold on;</span>
+<span class="comment">% plot(1:3,meanBerPlain,'r');</span>
+<span class="comment">% plot(1:3,meanBerPrecode,'b');</span>
+<span class="comment">% plot(1:3,meanBerZF,'g');</span>
+<span class="comment">% plot(1:3,meanBerMMSE,'m');</span>
+<span class="comment">% legend('plain','precoding','zf','mmse');</span>
+<span class="comment">% hold off;</span>
+</pre><pre class="codeoutput">
+SNR =
+
+    20
+
+Channel BER Targets
+
+H_BERtargets =
+
+   1.0e-05 *
+
+    0.1000    1.0000    1.0000
+
+
+meanBerPrecode =
+
+   1.0e-04 *
+
+    0.0292    0.2150    0.1792
+
+
+meanBerZF =
+
+   1.0e-05 *
+
+    0.1917    0.0625    0.0250
+
+
+meanBerMMSE =
+
+   1.0e-06 *
+
+         0         0    0.9583
+
+
+meanBitsPrecode =
+
+    71366400    44304000    44928000
+
+
+meanBitsZF =
+
+    71582400    47904000    47961600
+
+
+meanBitsMMSE =
+
+    48000000    24000000    47817600
+
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2015b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+clc;clear;close all;
+%% MIMO - Part 1 - Stephen Leone, Noah Santacruz
+N = 2400; %number of bits per iteration
+SNR = 20
+%N0=-SNR;%Transmit power is normalized to 0dBW
+numTx = 2;
+dopshift = 0;
+bitsThresh = 0;
+
+numIter = 5000;
+
+berPlain   = zeros(3,numIter);
+berPrecode = zeros(3,numIter);
+berZF      = zeros(3,numIter);
+berMMSE    = zeros(3,numIter);
+
+bitsPlain   = zeros(3,numIter);
+bitsPrecode = zeros(3,numIter);
+bitsZF      = zeros(3,numIter);
+bitsMMSE    = zeros(3,numIter);
+
+H1 = [1   0;...
+      0   0.8];
+H2 = [1.2 1;...
+      0.7 1.5];
+H3 = [0.85 0.4;...
+      0.4   0.95];...
+      
+Hs(:,:,1) = H1;
+Hs(:,:,2) = H2;
+Hs(:,:,3) = H3;
+
+disp('Channel BER Targets')
+H_BERtargets = [1E-6 1E-5 1E-5]
+
+precodeMs = [64,16,16];
+zfMs = [64,16,16];
+mmseMs = [16,4,16];
+
+h = waitbar(0,'...');
+for Htype = 1:3
+    H = Hs(:,:,Htype);
+    for Mtype = 1:3
+        if Mtype == 1
+            M = precodeMs(Htype);
+        elseif Mtype == 2
+            M = zfMs(Htype);
+        elseif Mtype == 3
+            M = mmseMs(Htype);
+        end
+        k = log2(M);
+        
+        for jj = 1:numIter
+            bits = randi([0,1],numTx,N);
+            msg = zeros(2,size(bits,2)/k);
+            for ii = 1:numTx
+                msg(ii,:) = bi2de(reshape(bits(ii,:),k,size(bits,2)/k).','left-msb')';
+            end
+            xTilde = qammod(msg,M);
+            %xTilde = xTilde./std(xTilde(:)); %normalize power
+
+            %chan1 = rayleighchan(T,dopshift);
+            %chan2 = rayleighchan(T,dopshift);
+            %chan3 = rayleighchan(T,dopshift);
+            %chan4 = rayleighchan(T,dopshift);
+
+            %H = [chan1.PathGains,chan2.PathGains;chan3.PathGains,chan4.PathGains];
+            [U,S,V] = svd(H);
+
+            N0linear = std(xTilde(:))/10^(SNR/10);
+            N0db = 10*log10(N0linear);
+            noise = wgn(size(xTilde,1),size(xTilde,2),N0db,'complex');
+
+            %PLAIN MIMO
+            yPlain = H*xTilde;
+            yPlainN = yPlain + noise;
+%             msgRxPlain = qamdemod(yPlainN,M);
+%             [bitsPlain(Htype,jj),berPlain(Htype,jj)] = biterr(msg,msgRxPlain);
+
+            
+            if Mtype == 1
+                %PRECODING
+                xPrecode = V*xTilde;
+                yPrecode = H*xPrecode;
+                yPrecodeN = yPrecode + noise;
+
+                yTilde = (U' * yPrecodeN);
+                yTilde = S\yTilde;
+                if numIter == 1
+                    scatterplotColorful(yPrecodeN,xTilde,yTilde,['Precoding - ' int2str(Htype)]);
+                end
+                msgRxPrecode = qamdemod(yTilde,M);
+                %Why Not This?
+                %bitsRxPrecode = de2bi(msgRxPrecode,'left-msb');
+                %[bitsLost,berPrecode(Htype,jj)] = biterr(bits,bitsRxPrecode);
+                [bitsLost,berPrecode(Htype,jj)] = biterr(msg,msgRxPrecode);
+                if bitsLost <= bitsThresh
+                    bitsPrecode(Htype,jj) = N*k - bitsLost;
+                end
+            elseif Mtype == 2
+                %ZEROFORCING
+                W = (H'*H)\H';
+
+                yZFN = W*yPlainN;
+                if numIter == 1
+                    scatterplotColorful(yPlainN,xTilde,yZFN,['Zero Forcing - ' int2str(Htype)]);
+                end
+                msgRxZF = qamdemod(yZFN,M);
+                [bitsLost,berZF(Htype,jj)] = biterr(msg,msgRxZF);
+                if bitsLost <= bitsThresh
+                    bitsZF(Htype,jj) = N*k - bitsLost;
+                end
+            elseif Mtype == 3
+                %MMSE
+                W = (H'*H + N0linear)\H';
+                yMMSEN = W*yPlainN;
+
+                if (numIter == 1) 
+                    scatterplotColorful(yPlainN,xTilde,yMMSEN,['MMSE - ' int2str(Htype)]);
+                end
+                msgRxMMSE = qamdemod(yMMSEN,M);
+                [bitsLost,berMMSE(Htype,jj)] = biterr(msg,msgRxMMSE);
+                if bitsLost <= bitsThresh
+                    bitsMMSE(Htype,jj) = N*k - bitsLost;
+                end
+            end
+        end
+    end
+    waitbar(Htype/length(1:3));
+end
+close(h);
+%meanBerPlain = mean(berPlain,2)'
+meanBerPrecode = mean(berPrecode,2)'
+meanBerZF = mean(berZF,2)'
+meanBerMMSE = mean(berMMSE,2)'
+
+meanBitsPrecode = sum(bitsPrecode,2)'
+meanBitsZF = sum(bitsZF,2)'
+meanBitsMMSE = sum(bitsMMSE,2)'
+
+% figure; hold on;
+% plot(1:3,meanBerPlain,'r');
+% plot(1:3,meanBerPrecode,'b');
+% plot(1:3,meanBerZF,'g');
+% plot(1:3,meanBerMMSE,'m');
+% legend('plain','precoding','zf','mmse');
+% hold off;
+
+##### SOURCE END #####
+--></body></html>

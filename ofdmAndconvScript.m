@@ -1,5 +1,5 @@
 clc, clear, close all;
-%% 802.11a Spec - Stephen Leone, Noah Santacruz
+%% OFDM - Part 2 - Stephen Leone, Noah Santacruz
 totPak = 2560;
 packetSize = 2304;
 SNR = 20
