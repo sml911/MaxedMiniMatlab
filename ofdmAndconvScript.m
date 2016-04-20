@@ -1,20 +1,25 @@
 clc, clear, close all;
 %% 802.11a Spec - Stephen Leone, Noah Santacruz
-totPak = 64;
+totPak = 2560;
 packetSize = 2304;
-EbNo_Vec = 0:2:10;
-traceback=12;
-sigpow=1;
+SNR = 20
 
-berVec = zeros(totPak,size(EbNo_Vec,2));
-trel = poly2trellis(7,[133,171]); %[1011011,1111001] in binary
-spect = distspec(trel,2);
-H1 = [1 .3];
-H2 = [.2 .5 1 .3];
-H3 = [1 .05 .3 .4 .2 .05];
-R=1/2;
+H1 = [1 0.8]
+H2 = [1 .5 1 .8]
+H3 = [1 .05 .3 .4 .2 .05]
+
+H_Bertargets = [1E-6,1E-5,1E-5];
+
+zfMs = [64,8,16];
+mmseMs = [64,8,16];
+
+bitsVecZF = zeros(3,totPak);
+bitsVecMMSE = zeros(3,totPak);
+berVecZF = zeros(3,totPak);
+berVecMMSE = zeros(3,totPak);
+
+h = waitbar(0,'...');
 for Htype = 1:3
-    figure;
     switch Htype
         
         case 1, 
@@ -28,90 +33,77 @@ for Htype = 1:3
             titl='Channel3';
     end
     H = H/sqrt(var(H));
-    for datarate=[6,12,24];
-        switch datarate
-            case 6,
-                M=2;
-                pointStyleZF='*b-';
-                pointStyleMMSE='^b-';
-            case 12,
-                M=4;
-                R=1/2;
-                pointStyleZF='*r-';
-                pointStyleMMSE='^r-';
-            case 24,
-                M=16;
-                R=1/2;
-                pointStyleZF='*g-';
-                pointStyleMMSE='^g-';
-            otherwise,
-                disp(['Rate ' num2str(datarate) ' not supported']);
-                exit(1);
+    
+    
+    for Mtype=1:2  % 2== number of equalization schemes
+        if Mtype == 1
+            M = zfMs(Htype);
+        elseif Mtype == 2
+            M = mmseMs(Htype);
         end
-
-        disp(['Simulating Rate ' num2str(datarate) ' Mbps']);
+    
         k = log2(M);
-        snrs = EbNo_Vec + 10.*log10(k*R*48/64);
 
-        for pak=1:totPak/k
+        for pak=1:totPak
+            bits = randi([0 1],k*packetSize,1);
+            txVitBits = bits; %convenc(bits,trel);
+            msg = bi2de(reshape(txVitBits,k,length(txVitBits)/k).','left-msb')';
+            txMod = qammod(msg,M,0,'gray');
+            
+            N0linear = std(txMod(:))/10^(SNR/10);
+            N0db = 10*log10(N0linear);
+            frameCount=numel(txMod)/48;
+            OFDMsig = OFDMmod(txMod,frameCount);
+            %channel
 
-            for ebno = 1:length(EbNo_Vec)
-                bits = randi([0 1],k*packetSize,1);
-                txVitBits = convenc(bits,trel);
-                msg = bi2de(reshape(txVitBits,k,length(txVitBits)/k).','left-msb')';
-                txMod = qammod(msg,M,0,'gray');
-                frameCount=numel(txMod)/48;
-                OFDMsig = OFDMmod(txMod,frameCount);
-                %channel
+            OFDMsig = conv(H,OFDMsig);
 
-                OFDMsig = conv(H,OFDMsig);
+            noise = wgn(80*frameCount,1,N0db,'complex');
+            noisyTx = OFDMsig(1:80*frameCount) + noise;
 
+            %receive
 
-                noisyTx = awgn(OFDMsig(1:80*frameCount),snrs(ebno),sigpow);
-
-                %receive
-
-                rxOFDMsym = reshape(noisyTx,80,frameCount);
-                rxFFTin = rxOFDMsym(17:80,:);
+            rxOFDMsym = reshape(noisyTx,80,frameCount);
+            rxFFTin = rxOFDMsym(17:80,:);
 
 
-                rxFFTZF = fft(rxFFTin,64,1)./repmat(fft(H',64,1),1,frameCount);
-                N0 = 10^(-snrs(ebno)/10);
+            rxFFTZF = fft(rxFFTin,64,1)./repmat(fft(H',64,1),1,frameCount);
 
-                rxFFTMMSE = fft(rxFFTin,64,1)./(repmat(fft(H',64,1),1,frameCount)+N0);
-                for eq = 0:1
-                    if eq
-                        rxFFTout = rxFFTZF;
-                    else
-                        rxFFTout = rxFFTMMSE;
-                    end
-                    rxDemod = OFDMdemod(rxFFTout,frameCount);
-                    rxDemod = rxDemod * std(txMod) / std(rxDemod);
-                    rx = qamdemod(rxDemod,M,0,'gray');
-                    rx = de2bi(rx,'left-msb');
-                    rxBits = reshape(rx.',numel(rx),1);
-                    rxVitBits = vitdec(rxBits,trel,traceback,'cont','hard'); % Decode
 
-                    if eq
-                        [~,berVecZF(pak,ebno)] = biterr(bits(1:end-traceback), rxVitBits(traceback+1:end));
-                    else
-                        [~,berVecMMSE(pak,ebno)] = biterr(bits(1:end-traceback), rxVitBits(traceback+1:end));
-                    end
-                end 
+            rxFFTMMSE = fft(rxFFTin,64,1)./(repmat(fft(H',64,1),1,frameCount)+N0linear);
+            if Mtype == 1
+                rxFFTout = rxFFTZF;
+            elseif Mtype == 2
+                rxFFTout = rxFFTMMSE;
+            end
+            rxDemod = OFDMdemod(rxFFTout,frameCount);
+            rxDemod = rxDemod * std(txMod) / std(rxDemod);
+            rx = qamdemod(rxDemod,M,0,'gray');
+            rx = de2bi(rx,'left-msb');
+            rxBits = reshape(rx.',numel(rx),1);
+            rxVitBits = rxBits; 
+
+            if Mtype == 1
+                [bitsLost,berVecZF(Htype,pak)] = biterr(bits, rxVitBits);
+                if bitsLost == 0
+                    bitsVecZF(Htype,pak) = packetSize * k - bitsLost;
+                end
+            elseif Mtype == 2
+                [bitsLost,berVecMMSE(Htype,pak)] = biterr(bits, rxVitBits);
+                if bitsLost == 0
+                   bitsVecMMSE(Htype,pak) = packetSize * k - bitsLost;
+                end
             end
         end
-
-        berZF = mean(berVecZF(1:totPak/k,:),1);
-        berMMSE = mean(berVecMMSE(1:totPak/k,:),1);
-        semilogy(EbNo_Vec, berZF,pointStyleZF)
-        hold on
-        semilogy(EbNo_Vec, berMMSE,pointStyleMMSE)
-
     end
-    %6zf, 6mmse, 12zf,12mmse, 24zf, 24mmse
-    legend('6zf', '6mmse', '12zf','12mmse', '24zf', '24mmse');
-    xlabel('EbNo');
-    ylabel('Bit Error Rate');
-    title(titl);
-    axis([0 20 1e-5 1e0])
+    
+
+    waitbar(Htype/3);
 end
+close(h);
+
+berZF = mean(berVecZF,2)'
+berMMSE = mean(berVecMMSE,2)'
+
+bitsZF = sum(bitsVecZF,2)'
+bitsMMSE = sum(bitsVecMMSE,2)'

@@ -2,7 +2,7 @@ clc, clear, close all;
 
 M = 2;
 k = log2(M);
-SNR = 0;
+SNR = 20;
 totPak = 1;
 N = 2304*2;
 
@@ -77,7 +77,7 @@ for jj = 1:totPak
         Hk = BigHFFT(:,:,kk)'; %transpose b/c o/w matrix multiply will mix wrong channels
         WZFk = (Hk'*Hk)\Hk;
         WMMSEk = (Hk'*Hk + N0linear)\Hk;
-        yZFN(:,:,kk) = WZFk*[rxFFT1(kk,:);...
+        yZFN(:,:,kk) = WZFk * [rxFFT1(kk,:);...
                              rxFFT2(kk,:)];
         yMMSEN(:,:,kk) = WMMSEk * [rxFFT1(kk,:);...
                                    rxFFT2(kk,:)];
