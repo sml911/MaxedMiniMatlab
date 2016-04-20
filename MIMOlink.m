@@ -9,6 +9,7 @@ bitsThresh = 0;
 
 numIter = 5000;
 
+
 berPlain   = zeros(3,numIter);
 berPrecode = zeros(3,numIter);
 berZF      = zeros(3,numIter);
@@ -20,12 +21,13 @@ bitsZF      = zeros(3,numIter);
 bitsMMSE    = zeros(3,numIter);
 
 H1 = [1   0;...
-      0   0.8];
-H2 = [1.2 1;...
+      0.01   0.8];
+H2 = [1.2 i;...
       0.7 1.5];
+
 H3 = [0.85 0.4;...
       0.4   0.95];...
-      
+
 Hs(:,:,1) = H1;
 Hs(:,:,2) = H2;
 Hs(:,:,3) = H3;
@@ -36,6 +38,7 @@ H_BERtargets = [1E-6 1E-5 1E-5]
 precodeMs = [64,16,16];
 zfMs = [64,16,16];
 mmseMs = [16,4,16];
+
 
 h = waitbar(0,'...');
 for Htype = 1:3
@@ -53,6 +56,7 @@ for Htype = 1:3
         for jj = 1:numIter
             bits = randi([0,1],numTx,N);
             msg = zeros(2,size(bits,2)/k);
+            
             for ii = 1:numTx
                 msg(ii,:) = bi2de(reshape(bits(ii,:),k,size(bits,2)/k).','left-msb')';
             end
@@ -67,7 +71,7 @@ for Htype = 1:3
             %H = [chan1.PathGains,chan2.PathGains;chan3.PathGains,chan4.PathGains];
             [U,S,V] = svd(H);
 
-            N0linear = std(xTilde(:))/10^(SNR/10);
+            N0linear = std(xTilde(:))/10^(SNR(Htype)/10);
             N0db = 10*log10(N0linear);
             noise = wgn(size(xTilde,1),size(xTilde,2),N0db,'complex');
 
@@ -92,7 +96,8 @@ for Htype = 1:3
                 msgRxPrecode = qamdemod(yTilde,M);
                 %Why Not This?
                 %bitsRxPrecode = de2bi(msgRxPrecode,'left-msb');
-                %[bitsLost,berPrecode(Htype,jj)] = biterr(bits,bitsRxPrecode);
+                %bitsRxPrecode = reshape(bitsRxPrecode.',numel(bitsRxPrecode)/2,2);
+                %[bitsLost,berPrecode(Htype,jj)] = biterr(bits',bitsRxPrecode);
                 [bitsLost,berPrecode(Htype,jj)] = biterr(msg,msgRxPrecode);
                 if bitsLost <= bitsThresh
                     bitsPrecode(Htype,jj) = N*k - bitsLost;
