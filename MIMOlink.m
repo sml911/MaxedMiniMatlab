@@ -1,13 +1,13 @@
 clc;clear;close all;
 %% MIMO - Part 1 - Stephen Leone, Noah Santacruz
-N = 2400; %number of bits per iteration
-SNR = 20
+N = 24000; %number of bits per iteration
+
 %N0=-SNR;%Transmit power is normalized to 0dBW
 numTx = 2;
 dopshift = 0;
 bitsThresh = 0;
 
-numIter = 5000;
+numIter = 1000;
 
 
 berPlain   = zeros(3,numIter);
@@ -25,19 +25,22 @@ H1 = [1   0;...
 H2 = [1.2 i;...
       0.7 1.5];
 
-H3 = [0.85 0.4;...
+H3 = [0.85 -0.4;...
       0.4   0.95];...
 
 Hs(:,:,1) = H1;
 Hs(:,:,2) = H2;
 Hs(:,:,3) = H3;
+Hs
 
 disp('Channel BER Targets')
-H_BERtargets = [1E-6 1E-5 1E-5]
+H_BERtargets = [1E-5 1E-5 1E-5]
 
-precodeMs = [64,16,16];
-zfMs = [64,16,16];
-mmseMs = [16,4,16];
+SNR = [20 15 12]
+Ms = [64,16,4] %modulation for each channel
+precodeMs = [64,16,4];
+zfMs = [64,16,4];
+mmseMs = [64,16,4];
 
 
 h = waitbar(0,'...');
@@ -117,9 +120,9 @@ for Htype = 1:3
                 end
             elseif Mtype == 3
                 %MMSE
-                W = (H'*H + N0linear)\H';
+                W = (H'*H - N0linear*eye(2))\H';
                 yMMSEN = W*yPlainN;
-
+                yMMSEN = yMMSEN * std(xTilde(:)) / std(yMMSEN(:));
                 if (numIter == 1) 
                     scatterplotColorful(yPlainN,xTilde,yMMSEN,['MMSE - ' int2str(Htype)]);
                 end
@@ -139,9 +142,9 @@ meanBerPrecode = mean(berPrecode,2)'
 meanBerZF = mean(berZF,2)'
 meanBerMMSE = mean(berMMSE,2)'
 
-meanBitsPrecode = sum(bitsPrecode,2)'
-meanBitsZF = sum(bitsZF,2)'
-meanBitsMMSE = sum(bitsMMSE,2)'
+%meanBitsPrecode = sum(bitsPrecode,2)'
+%meanBitsZF = sum(bitsZF,2)'
+%meanBitsMMSE = sum(bitsMMSE,2)'
 
 % figure; hold on;
 % plot(1:3,meanBerPlain,'r');
